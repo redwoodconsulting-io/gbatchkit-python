@@ -1,9 +1,9 @@
 from gbatchkit.jobs import create_standard_job
 from gbatchkit.types import (
-    Runnable,
     ServiceAccountConfig,
     NetworkInterfaceConfig,
-    ComputeConfig, ContainerRunnable,
+    ComputeConfig,
+    ContainerRunnable,
 )
 
 
@@ -17,8 +17,16 @@ def test_create_standard_job():
         ),
         task_count=1,
         runnables=[
-            ContainerRunnable(image_uri="gcr.io/my-project/my-image", entrypoint="command", commands=["arg1", "arg2"]),
-            ContainerRunnable(image_uri="gcr.io/my-project/my-image-2", entrypoint="command-2", commands=["arg1-2", "arg2-2"]),
+            ContainerRunnable(
+                image_uri="gcr.io/my-project/my-image",
+                entrypoint="command",
+                commands=["arg1", "arg2"],
+            ),
+            ContainerRunnable(
+                image_uri="gcr.io/my-project/my-image-2",
+                entrypoint="command-2",
+                commands=["arg1-2", "arg2-2"],
+            ),
         ],
         tmp_dir="/tmp-workspace",
         tmp_dir_size_gb=321,
