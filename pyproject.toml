@@ -30,7 +30,7 @@ requires-python = ">=3.9, <=3.12"
 dependencies = {file = "requirements.txt"}
 
 [project.optional-dependencies]
-dev = ["black", "bumpver", "callee", "isort", "pip-tools", "pytest"]
+dev = ["black", "build", "bumpver", "callee", "isort", "pip-tools", "pytest", "twine"]
 
 [project.urls]
 Homepage = "https://github.com/redwoodconsulting-io/gbatchkit-python"
