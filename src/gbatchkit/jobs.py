@@ -205,6 +205,9 @@ def add_job_dependencies(job: dict, job_ids: list[str]):
     Add job dependencies to the job definition.
     """
     job_ids = filter(None, job_ids)
+    if not job_ids:
+        return
+
     dependencies = job.setdefault("dependencies", [{"items": {}}])[0]
     for job_id in job_ids:
         dependencies["items"][job_id] = "SUCCEEDED"
