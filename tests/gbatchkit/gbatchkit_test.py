@@ -1,4 +1,4 @@
-from gbatchkit.jobs import create_standard_job
+from gbatchkit.jobs import create_standard_job, add_job_dependencies
 from gbatchkit.types import (
     ServiceAccountConfig,
     NetworkInterfaceConfig,
@@ -135,3 +135,23 @@ def test_create_standard_job():
             }
         ],
     }
+
+
+def test_add_dependency():
+    job = {
+    }
+
+    add_job_dependencies(job, [])
+
+    assert job == {}
+
+    add_job_dependencies(job, ["job-id-1", "job-id-2"])
+
+    assert job["dependencies"] == [
+        {
+            "items": {
+                "job-id-1": "SUCCEEDED",
+                "job-id-2": "SUCCEEDED",
+            }
+        }
+    ]
