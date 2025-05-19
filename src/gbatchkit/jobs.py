@@ -209,7 +209,7 @@ def add_job_dependencies(job: dict, job_ids: list[str]):
     """
     Add job dependencies to the job definition.
     """
-    job_ids = filter(None, job_ids)
+    job_ids = list(filter(None, job_ids))
     if not job_ids:
         return
 
