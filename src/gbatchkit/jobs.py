@@ -2,7 +2,8 @@ from gbatchkit.types import (
     ComputeConfig,
     NetworkInterfaceConfig,
     ServiceAccountConfig,
-    Runnable, ContainerRunnable,
+    Runnable,
+    ContainerRunnable,
 )
 
 
@@ -11,13 +12,17 @@ def create_standard_job(
     compute_config: ComputeConfig,
     task_count: int,
     runnables: list[Runnable],
+    parallelism: int = 1,
+    task_count_per_node: int = 1,
     tmp_dir: str = None,
-    tmp_dir_size_gb: int = 0,
+    tmp_dir_size_gb: int = None,
     network_interface: NetworkInterfaceConfig = None,
     service_account: ServiceAccountConfig = None,
     depends_on_job_ids: list[str] = None,
 ) -> dict:
-    job = create_job_base(task_count)
+    job = create_job_base(
+        task_count, task_count_per_node=task_count_per_node, parallelism=parallelism
+    )
     for runnable in runnables:
         add_runnable(job, runnable)
 
@@ -41,8 +46,8 @@ def create_standard_job(
 
 def create_job_base(
     task_count: int,
-    task_count_per_node: int = 1,
-    parallelism: int = None,
+    task_count_per_node: int,
+    parallelism: int,
     preemption_retry_count: int = 3,
 ) -> dict:
     parallelism = parallelism or 1
