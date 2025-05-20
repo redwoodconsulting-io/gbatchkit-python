@@ -1,3 +1,8 @@
+import json
+from typing import List, TypeVar, Union
+
+import smart_open
+
 from gbatchkit.types import (
     ComputeConfig,
     NetworkInterfaceConfig,
@@ -6,19 +11,73 @@ from gbatchkit.types import (
     ContainerRunnable,
 )
 
+TaskArgsType = TypeVar("TaskArgsType")
+
+
+def prepare_multitask_job(
+    job: dict,
+    tasks: List[Union[dict, TaskArgsType]] = None,
+    runnable_tasks: List[List[Union[dict, TaskArgsType]]] = None,
+    working_directory: str = None,
+):
+    if tasks and runnable_tasks:
+        raise ValueError("Specify tasks or runnable_tasks, not both")
+
+    runnables = job["taskGroups"][0]["taskSpec"].setdefault("runnables", [])
+    if not runnables:
+        raise ValueError("No runnables found in the job definition")
+
+    num_runnables = len(runnables)
+    num_tasks = job["taskGroups"][0]["taskCount"]
+
+    if runnable_tasks:
+        if len(runnable_tasks) != num_runnables:
+            raise ValueError(f"Need tasks for each of {num_runnables} runnables, got {len(runnable_tasks)}")
+
+        for i, (runnable, tasks) in enumerate(zip(runnables, runnable_tasks)):
+            if len(tasks) != num_tasks:
+                raise ValueError(f"Need {num_tasks} tasks for runnable {i}, got {len(tasks)}")
+            runnable_tasks_path = f"{working_directory}/runnable_{i}_tasks.json"
+            set_runnable_environment_variable(runnable, "GBATCHKIT_ARGS_PATH", runnable_tasks_path)
+            write_tasks(tasks, runnable_tasks_path)
+    elif tasks:
+        if len(tasks) != num_tasks:
+            raise ValueError(f"Need {num_tasks} tasks, got {len(tasks)}")
+
+        runnable_tasks_path = f"{working_directory}/tasks.json"
+        set_job_environment_variable(job, "GBATCHKIT_ARGS_PATH", runnable_tasks_path)
+        write_tasks(tasks, runnable_tasks_path)
+    else:
+        raise ValueError("Need to specify either tasks or runnable_tasks")
+
+
+def write_tasks(tasks: List[Union[dict, TaskArgsType]], tasks_path: str):
+    """
+    Write tasks to a JSON file.
+    """
+    with smart_open.open(tasks_path, "w") as f:
+        # str then write separated for ease of testing :-/
+        json_str = json.dumps(
+            [
+                task.model_dump() if hasattr(task, "model_dump") else task
+                for task in tasks
+            ]
+        )
+        f.write(json_str)
+
 
 def create_standard_job(
     region: str,
     compute_config: ComputeConfig,
     task_count: int,
-    runnables: list[Runnable],
+    runnables: List[Runnable],
     parallelism: int = 1,
     task_count_per_node: int = 1,
     tmp_dir: str = None,
     tmp_dir_size_gb: int = None,
     network_interface: NetworkInterfaceConfig = None,
     service_account: ServiceAccountConfig = None,
-    depends_on_job_ids: list[str] = None,
+    depends_on_job_ids: List[str] = None,
 ) -> dict:
     job = create_job_base(
         task_count, task_count_per_node=task_count_per_node, parallelism=parallelism
@@ -188,6 +247,19 @@ def set_job_environment_variable(
     Set an environment variable for the task in the job definition.
     """
     env = job["taskGroups"][0]["taskSpec"].setdefault("environment", {})
+    env_vars = env.setdefault("variables", {})
+    env_vars[key] = value
+
+
+def set_runnable_environment_variable(
+    runnable: dict,
+    key: str,
+    value: str,
+) -> None:
+    """
+    Set an environment variable for the runnable in the job definition.
+    """
+    env = runnable.setdefault("environment", {})
     env_vars = env.setdefault("variables", {})
     env_vars[key] = value
 
