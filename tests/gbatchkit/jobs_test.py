@@ -23,18 +23,18 @@ def test_prepare_multitask_job_with_single_task_list(mock_smart_open):
                         }
                     ]
                 },
-                "taskCount": 1,
+                "taskCount": 3,
             }
         ]
     }
 
-    tasks = [{"task_id": 1, "param": "value1"}, {"task_id": 2, "param": "value2"}]
+    tasks = [{"task_id": 1, "param": "value1"}, {"task_id": 2, "param": "value2"}, {"task_id": 3, "param": "value3"}]
 
     prepare_multitask_job(job=job, tasks=tasks, working_directory="/test-dir")
 
     mock_smart_open.assert_called_once_with("/test-dir/tasks.json", "w")
     handle = mock_smart_open()
-    handle.write.assert_called_once_with('[{"task_id": 1, "param": "value1"}, {"task_id": 2, "param": "value2"}]')
+    handle.write.assert_called_once_with('[{"task_id": 1, "param": "value1"}, {"task_id": 2, "param": "value2"}, {"task_id": 3, "param": "value3"}]')
     assert job["taskGroups"][0]["taskSpec"]["environment"]["variables"]["GBATCHKIT_ARGS_PATH"] == "/test-dir/tasks.json"
 
 
