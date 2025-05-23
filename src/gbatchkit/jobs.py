@@ -1,6 +1,7 @@
 import json
 from typing import List, TypeVar, Union
 
+import math
 import smart_open
 
 from gbatchkit.types import (
@@ -213,6 +214,9 @@ def add_attached_disk(
     Set the boot disk size for the job definition.
     """
     disks = job["allocationPolicy"]["instances"][0]["policy"].setdefault("disks", [])
+
+    size_gb = math.ceil(size_gb)
+
     disks.append(
         {
             "deviceName": device_name,
