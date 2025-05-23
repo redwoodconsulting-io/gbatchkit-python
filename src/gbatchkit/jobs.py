@@ -34,7 +34,17 @@ def submit_job(job: dict, job_id: str, region: str) -> None:
             job_json_str = json.dumps(job)
             f.write(job_json_str)
 
-        cmd = ["gcloud", "batch", "jobs", "submit", job_id, "--location", region, "--config", job_json_file.name]
+        cmd = [
+            "gcloud",
+            "batch",
+            "jobs",
+            "submit",
+            job_id,
+            "--location",
+            region,
+            "--config",
+            job_json_file.name,
+        ]
         result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
         if result.returncode != 0:
@@ -79,13 +89,19 @@ def prepare_multitask_job(
 
     if runnable_tasks:
         if len(runnable_tasks) != num_runnables:
-            raise ValueError(f"Need tasks for each of {num_runnables} runnables, got {len(runnable_tasks)}")
+            raise ValueError(
+                f"Need tasks for each of {num_runnables} runnables, got {len(runnable_tasks)}"
+            )
 
         for i, (runnable, tasks) in enumerate(zip(runnables, runnable_tasks)):
             if len(tasks) != num_tasks:
-                raise ValueError(f"Need {num_tasks} tasks for runnable {i}, got {len(tasks)}")
+                raise ValueError(
+                    f"Need {num_tasks} tasks for runnable {i}, got {len(tasks)}"
+                )
             runnable_tasks_path = f"{working_directory}/runnable_{i}_tasks.json"
-            set_runnable_environment_variable(runnable, "GBATCHKIT_ARGS_PATH", runnable_tasks_path)
+            set_runnable_environment_variable(
+                runnable, "GBATCHKIT_ARGS_PATH", runnable_tasks_path
+            )
             write_tasks(tasks, runnable_tasks_path)
     elif tasks:
         if len(tasks) != num_tasks:
