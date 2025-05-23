@@ -1,4 +1,4 @@
-from gbatchkit.jobs import create_standard_job, add_job_dependencies, prepare_multitask_job
+from gbatchkit.jobs import create_standard_job, add_job_dependencies, prepare_multitask_job, add_attached_disk
 from gbatchkit.types import (
     ServiceAccountConfig,
     NetworkInterfaceConfig,
@@ -220,6 +220,31 @@ def test_create_standard_job():
         ],
     }
 
+
+def test_add_attached_disk():
+    job = {
+        "allocationPolicy": {
+            "instances": [
+                {
+                    "policy": {
+                        "disks": [],
+                    }
+                }
+            ]
+        }
+    }
+
+    add_attached_disk(job, "disk-1", 123.456)
+
+    assert job["allocationPolicy"]["instances"][0]["policy"]["disks"] == [
+        {
+            "deviceName": "disk-1",
+            "newDisk": {
+                "type": "pd-balanced",
+                "sizeGb": 124,
+            },
+        }
+    ]
 
 def test_add_dependency():
     job = {
