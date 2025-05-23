@@ -17,10 +17,30 @@ TaskArgsType = TypeVar("TaskArgsType")
 
 def prepare_multitask_job(
     job: dict,
+    working_directory: str,
     tasks: List[Union[dict, TaskArgsType]] = None,
     runnable_tasks: List[List[Union[dict, TaskArgsType]]] = None,
-    working_directory: str = None,
 ):
+    """
+    Prepare a multitask job by assigning tasks, or per-runnable tasks to the job,
+    configuring the necessary environment variables, and serializing the tasks
+    to JSON files.
+
+    :param dict job: The job being prepared.
+    :param str working_directory: The directory where JSON tasks will be stored.
+    :param tasks: Tasks, shared by all runnables. This is mutually exclusive
+        with `runnable_tasks`.
+    :type tasks: list[Union[dict, TaskArgsType]], optional
+    :param runnable_tasks: A list of tasks per runnable. Must have a task
+        list for each runnable. This is mutually exclusive with `tasks`.
+    :type runnable_tasks: list[list[Union[dict, TaskArgsType]]], optional
+    :return: None
+    :raises ValueError: If both `tasks` and `runnable_tasks` are specified, if the number
+        of `runnable_tasks` does not match the number of runnables in the job, if the
+        number of tasks in any `runnable_tasks` does not match the required task count,
+        or if no tasks or runnable tasks are provided.
+    :raises ValueError: If there are no runnables provided in the job definition.
+    """
     if tasks and runnable_tasks:
         raise ValueError("Specify tasks or runnable_tasks, not both")
 
