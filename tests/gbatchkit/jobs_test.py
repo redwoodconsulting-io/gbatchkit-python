@@ -1,11 +1,68 @@
-from gbatchkit.jobs import create_standard_job, add_job_dependencies, prepare_multitask_job, add_attached_disk
+import json
+from subprocess import CompletedProcess, DEVNULL, PIPE
+from unittest.mock import patch, mock_open, ANY
+
+from gbatchkit.jobs import (
+    create_standard_job,
+    add_job_dependencies,
+    prepare_multitask_job,
+    add_attached_disk,
+    submit_job,
+)
 from gbatchkit.types import (
     ServiceAccountConfig,
     NetworkInterfaceConfig,
     ComputeConfig,
     ContainerRunnable,
 )
-from unittest.mock import patch, mock_open
+
+
+@patch("subprocess.run")
+@patch("smart_open.open", new_callable=mock_open)
+def test_submit_job(mock_smart_open, mock_subprocess_run):
+    job = {
+        "taskGroups": [
+            {
+                "taskSpec": {
+                    "runnables": [
+                        {
+                            "container": {
+                                "image_uri": "test-image",
+                                "entrypoint": "test-command",
+                            }
+                        }
+                    ]
+                },
+                "taskCount": 1,
+            }
+        ]
+    }
+
+    # Call the function under test
+    mock_subprocess_run.return_value = CompletedProcess([], returncode=0)
+    submit_job(job, job_id="test-job-id", region="us-central1")
+
+    # Verify that the smart_open mock was used correctly
+    mock_smart_open.assert_called_once_with(ANY, "w")
+    handle = mock_smart_open()
+    handle.write.assert_called_once_with(json.dumps(job))
+
+    # Verify that subprocess.run was called correctly
+    mock_subprocess_run.assert_called_once_with(
+        [
+            "gcloud",
+            "batch",
+            "jobs",
+            "submit",
+            "test-job-id",
+            "--location",
+            "us-central1",
+            "--config",
+            ANY,
+        ],
+        stdout=DEVNULL,
+        stderr=PIPE,
+    )
 
 
 @patch("smart_open.open", new_callable=mock_open)

@@ -1,4 +1,6 @@
 import json
+import subprocess
+import tempfile
 from typing import List, TypeVar, Union
 
 import math
@@ -13,6 +15,30 @@ from gbatchkit.types import (
 )
 
 TaskArgsType = TypeVar("TaskArgsType")
+
+
+def submit_job(job: dict, job_id: str, region: str) -> None:
+    """
+    Submit a job to the Batch service.
+    """
+    if not job:
+        raise ValueError("Job definition is empty")
+    if not job_id or len(job_id) > 64:
+        raise ValueError("Job ID must be 1-64 characters")
+    if not region:
+        raise ValueError("Region is required")
+
+    with tempfile.NamedTemporaryFile() as job_json_file:
+        with smart_open.open(job_json_file.name, "w") as f:
+            # separated for ease of testing
+            job_json_str = json.dumps(job)
+            f.write(job_json_str)
+
+        cmd = ["gcloud", "batch", "jobs", "submit", job_id, "--location", region, "--config", job_json_file.name]
+        result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+
+        if result.returncode != 0:
+            raise RuntimeError(f"Failed to submit job: {result.stderr.decode('utf-8')}")
 
 
 def prepare_multitask_job(
