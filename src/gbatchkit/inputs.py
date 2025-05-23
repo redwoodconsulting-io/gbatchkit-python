@@ -16,19 +16,19 @@ def get_task_arguments(
 ) -> Union[TaskArgsType, dict]:
     """
     Get task arguments from command line or environment variable.
-    
+
     are provided alongside a task_args_cls, parse the arguments into an arguments
     object of the given type.
-    
+
     If no arguments are provided, check the GBATCHKIT_ARGS_PATH environment
     variable. If present, treat it as a path to a json array of task arguments.
     Read the entry at the BATCH_TASK_INDEX. If provided, the task_args_cls is
     used to parse the input data.
-    
+
     Lastly, if neither args nor the GBATCHKIT_ARGS_PATH environment variable are
     provided, attempt to parse from process command-line arguments. task_args_cls
     is required in this case.
-    
+
     :param task_args_cls: A Pydantic model class defining the expected arguments.
         (Required if parsing from the command line.)
     :param args: Command line arguments to parse. If None, sys.argv[1:] is used.
@@ -36,7 +36,7 @@ def get_task_arguments(
     :return: Parsed arguments as a Pydantic model instance.
     """
     args_path = os.environ.get("GBATCHKIT_ARGS_PATH", None)
-    
+
     if args and task_args_cls:
         # First priority: explicit args
         task_args = parse_cmdline_args(task_args_cls, task_name, args)
@@ -49,7 +49,9 @@ def get_task_arguments(
         args = sys.argv[1:] if args is None else args
         task_args = parse_cmdline_args(task_args_cls, task_name, args)
     else:
-        raise ValueError("Need GBATCHKIT_ARGS_PATH env, or task_args_cls to read from args")
+        raise ValueError(
+            "Need GBATCHKIT_ARGS_PATH env, or task_args_cls to read from args"
+        )
 
     if task_args_cls:
         return task_args_cls(**task_args)

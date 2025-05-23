@@ -1,11 +1,68 @@
-from gbatchkit.jobs import create_standard_job, add_job_dependencies, prepare_multitask_job, add_attached_disk
+import json
+from subprocess import CompletedProcess, DEVNULL, PIPE
+from unittest.mock import patch, mock_open, ANY
+
+from gbatchkit.jobs import (
+    create_standard_job,
+    add_job_dependencies,
+    prepare_multitask_job,
+    add_attached_disk,
+    submit_job,
+)
 from gbatchkit.types import (
     ServiceAccountConfig,
     NetworkInterfaceConfig,
     ComputeConfig,
     ContainerRunnable,
 )
-from unittest.mock import patch, mock_open
+
+
+@patch("subprocess.run")
+@patch("smart_open.open", new_callable=mock_open)
+def test_submit_job(mock_smart_open, mock_subprocess_run):
+    job = {
+        "taskGroups": [
+            {
+                "taskSpec": {
+                    "runnables": [
+                        {
+                            "container": {
+                                "image_uri": "test-image",
+                                "entrypoint": "test-command",
+                            }
+                        }
+                    ]
+                },
+                "taskCount": 1,
+            }
+        ]
+    }
+
+    # Call the function under test
+    mock_subprocess_run.return_value = CompletedProcess([], returncode=0)
+    submit_job(job, job_id="test-job-id", region="us-central1")
+
+    # Verify that the smart_open mock was used correctly
+    mock_smart_open.assert_called_once_with(ANY, "w")
+    handle = mock_smart_open()
+    handle.write.assert_called_once_with(json.dumps(job))
+
+    # Verify that subprocess.run was called correctly
+    mock_subprocess_run.assert_called_once_with(
+        [
+            "gcloud",
+            "batch",
+            "jobs",
+            "submit",
+            "test-job-id",
+            "--location",
+            "us-central1",
+            "--config",
+            ANY,
+        ],
+        stdout=DEVNULL,
+        stderr=PIPE,
+    )
 
 
 @patch("smart_open.open", new_callable=mock_open)
@@ -28,14 +85,25 @@ def test_prepare_multitask_job_with_single_task_list(mock_smart_open):
         ]
     }
 
-    tasks = [{"task_id": 1, "param": "value1"}, {"task_id": 2, "param": "value2"}, {"task_id": 3, "param": "value3"}]
+    tasks = [
+        {"task_id": 1, "param": "value1"},
+        {"task_id": 2, "param": "value2"},
+        {"task_id": 3, "param": "value3"},
+    ]
 
     prepare_multitask_job(job=job, tasks=tasks, working_directory="/test-dir")
 
     mock_smart_open.assert_called_once_with("/test-dir/tasks.json", "w")
     handle = mock_smart_open()
-    handle.write.assert_called_once_with('[{"task_id": 1, "param": "value1"}, {"task_id": 2, "param": "value2"}, {"task_id": 3, "param": "value3"}]')
-    assert job["taskGroups"][0]["taskSpec"]["environment"]["variables"]["GBATCHKIT_ARGS_PATH"] == "/test-dir/tasks.json"
+    handle.write.assert_called_once_with(
+        '[{"task_id": 1, "param": "value1"}, {"task_id": 2, "param": "value2"}, {"task_id": 3, "param": "value3"}]'
+    )
+    assert (
+        job["taskGroups"][0]["taskSpec"]["environment"]["variables"][
+            "GBATCHKIT_ARGS_PATH"
+        ]
+        == "/test-dir/tasks.json"
+    )
 
 
 @patch("smart_open.open", new_callable=mock_open)
@@ -57,9 +125,9 @@ def test_prepare_multitask_job_with_tasks_per_runnable(mock_smart_open):
                                 "image_uri": "test-image-2",
                                 "entrypoint": "test-command-2",
                             }
-                        }
+                        },
                     ]
-                }
+                },
             }
         ]
     }
@@ -69,12 +137,20 @@ def test_prepare_multitask_job_with_tasks_per_runnable(mock_smart_open):
         [{"task2_id": "runnable2_task1"}, {"task2_id": "runnable2_task2"}],
     ]
 
-    prepare_multitask_job(job=job, runnable_tasks=runnable_tasks, working_directory="/test-dir")
+    prepare_multitask_job(
+        job=job, runnable_tasks=runnable_tasks, working_directory="/test-dir"
+    )
 
     # Verify files and the associated calls
     expected_calls = [
-        (("/test-dir/runnable_0_tasks.json", "w"), '[{"task1_id": "runnable1_task1"}, {"task1_id": "runnable1_task2"}]'),
-        (("/test-dir/runnable_1_tasks.json", "w"), '[{"task2_id": "runnable2_task1"}, {"task2_id": "runnable2_task2"}]'),
+        (
+            ("/test-dir/runnable_0_tasks.json", "w"),
+            '[{"task1_id": "runnable1_task1"}, {"task1_id": "runnable1_task2"}]',
+        ),
+        (
+            ("/test-dir/runnable_1_tasks.json", "w"),
+            '[{"task2_id": "runnable2_task1"}, {"task2_id": "runnable2_task2"}]',
+        ),
     ]
 
     assert mock_smart_open.call_count == 2
@@ -85,10 +161,18 @@ def test_prepare_multitask_job_with_tasks_per_runnable(mock_smart_open):
         handle.write.assert_any_call(expected_content)
 
     # Verify environment variables
-    assert job["taskGroups"][0]["taskSpec"]["runnables"][0]["environment"]["variables"][
-               "GBATCHKIT_ARGS_PATH"] == "/test-dir/runnable_0_tasks.json"
-    assert job["taskGroups"][0]["taskSpec"]["runnables"][1]["environment"]["variables"][
-               "GBATCHKIT_ARGS_PATH"] == "/test-dir/runnable_1_tasks.json"
+    assert (
+        job["taskGroups"][0]["taskSpec"]["runnables"][0]["environment"]["variables"][
+            "GBATCHKIT_ARGS_PATH"
+        ]
+        == "/test-dir/runnable_0_tasks.json"
+    )
+    assert (
+        job["taskGroups"][0]["taskSpec"]["runnables"][1]["environment"]["variables"][
+            "GBATCHKIT_ARGS_PATH"
+        ]
+        == "/test-dir/runnable_1_tasks.json"
+    )
 
 
 def test_create_standard_job():
@@ -246,9 +330,9 @@ def test_add_attached_disk():
         }
     ]
 
+
 def test_add_dependency():
-    job = {
-    }
+    job = {}
 
     add_job_dependencies(job, [])
 
